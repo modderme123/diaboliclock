@@ -6,6 +6,7 @@
 //
 
 import Cocoa
+import Network
 import ScriptingBridge
 
 @objc protocol TabThing {
@@ -38,6 +39,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   var menuItem: NSMenuItem!
   var oldTitle: NetworkMessageThing = NetworkMessageThing(app: "", title: "")
   var observer: AXObserver?
+
+  var connection: NWConnection!
 
   func callback(
     _ axObserver: AXObserver,
@@ -74,11 +77,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       }
 
       let jsonEncoder = JSONEncoder()
-      let jsonData = try! jsonEncoder.encode(
+      var jsonData = try! jsonEncoder.encode(
         dontSend ? NetworkMessageThing(app: "", title: "") : newTitle)
-      let json = String(data: jsonData, encoding: String.Encoding.utf8)
-      print(json)
-      //webSocketDelegate.send(json ?? "")
+
+      jsonData.append(0xa)
+      connection.restart()
+      connection.send(
+        content: jsonData, completion: NWConnection.SendCompletion.contentProcessed { _ in })
+
       oldTitle = newTitle
     }
   }
@@ -128,6 +134,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(self.asdf), name: NSWorkspace.didActivateApplicationNotification,
       object: nil)
+
+    connection = NWConnection(host: "127.0.0.1", port: 4444, using: .tcp)
+    connection.start(queue: .main)
   }
 
   func applicationDidFinishLaunching(_ aNotification: Notification) {
