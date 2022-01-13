@@ -1,47 +1,31 @@
-const net = require("net");
-const server = net.createServer();
+import { WebSocketServer } from 'ws';
+
+const wss = new WebSocketServer({ port: 4444 });
 
 let servos = new Set();
-server.on("connection", (conn) => {
-  conn.setEncoding("utf8");
-
+wss.on('connection', (ws) =>{
   let clientType = undefined;
+  ws.on('message', (data) =>{
+    console.log('received: %s', data);
 
-  let completeData = "";
-  conn.on("data", (d) => {
-    completeData += d.toString();
-    const dataArray = completeData.split("\n", 1);
-    if (dataArray.length > 1) {
-      const message = dataArray[0];
-      completeData = dataArray[1];
-
-      if (clientType === undefined) {
-        if (message == "arduino") {
-          servos.add(conn);
-          clientType = "arduino";
-        } else {
-          clientType = "web";
-        }
-      } else if (clientType == "web") {
-        servos.forEach((s) => {
-          s.write(message);
-        });
+    if (clientType === undefined) {
+      console.log("here", data == "arduino");
+      console.log("bla %s", data);
+      if (data == "arduino") {
+        servos.add(ws);
+        clientType = "arduino";
+      } else {
+        clientType = "web";
       }
-      console.log(message);
+    } else if (clientType == "web") {
+      servos.forEach((s) => {
+        s.send(data);
+      });
     }
+  });
 
-    console.log("connection data from ", d);
-  });
-  conn.once("close", () => {
-    console.log("connection closed");
-    servos.delete(conn);
-  });
-  conn.on("error", (err) => {
-    console.log("Connection error: ", err.message);
-    servos.delete(conn);
-  });
-});
-
-server.listen(4444, () => {
-  console.log("server listening to", server.address());
+  ws.on('close', () => {
+    servos.delete(ws)
+  })
+  ws.send('something');
 });

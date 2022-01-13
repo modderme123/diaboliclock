@@ -9,6 +9,37 @@ import Cocoa
 import Network
 import ScriptingBridge
 
+class WebSocket: NSObject, URLSessionWebSocketDelegate {
+  var webSocketTask: URLSessionWebSocketTask!
+  func urlSession(
+    _ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+    didOpenWithProtocol protocol: String?
+  ) {
+    self.webSocketTask = webSocketTask
+    print("Web Socket did connect")
+
+    self.send("web")
+  }
+
+  func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError: Error?) {
+    print("disconnected")
+    let url = URL(string: "ws://localhost:4444")!
+    DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
+      print("reconnecting")
+      self.webSocketTask = session.webSocketTask(with: url)
+      self.webSocketTask.resume()
+    }
+  }
+    
+  func send(_ str: String) {
+    webSocketTask.send(.string(str)) { error in
+      if let error = error {
+        print("Error when sending a message \(error)")
+      }
+    }
+  }
+}
+
 @objc protocol TabThing {
   @objc optional var URL: String { get }
 }
@@ -39,8 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   var menuItem: NSMenuItem!
   var oldTitle: NetworkMessageThing = NetworkMessageThing(app: "", title: "")
   var observer: AXObserver?
-
-  var connection: NWConnection!
+  var webSocketDelegate: WebSocket!
 
   func callback(
     _ axObserver: AXObserver,
@@ -76,14 +106,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         newTitle.url = t.URL
       }
 
-      let jsonEncoder = JSONEncoder()
-      var jsonData = try! jsonEncoder.encode(
-        dontSend ? NetworkMessageThing(app: "", title: "") : newTitle)
 
-      jsonData.append(0xa)
-      connection.restart()
-      connection.send(
-        content: jsonData, completion: NWConnection.SendCompletion.contentProcessed { _ in })
+      var jsonData =
+        dontSend ? "" : ((newTitle.app == "Google Chrome") ? "wow":"boo")
+
+      webSocketDelegate.send(jsonData ?? "")
 
       oldTitle = newTitle
     }
@@ -131,12 +158,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func tmp() {
+    webSocketDelegate = WebSocket()
+    let session = URLSession(
+      configuration: .default, delegate: webSocketDelegate, delegateQueue: OperationQueue())
+    let url = URL(string: "ws://localhost:4444")!
+    session.webSocketTask(with: url).resume()
+
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(self.asdf), name: NSWorkspace.didActivateApplicationNotification,
       object: nil)
-
-    connection = NWConnection(host: "127.0.0.1", port: 4444, using: .tcp)
-    connection.start(queue: .main)
   }
 
   func applicationDidFinishLaunching(_ aNotification: Notification) {

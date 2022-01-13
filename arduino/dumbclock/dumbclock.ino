@@ -1,16 +1,19 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <Servo.h>
+#include <WiFiHttpClient.h>
+
 #include "arduino_secrets.h"
 
-WiFiClient client;
 const char serverAddress[] = "192.168.16.149";
 int port = 4444;
 
-char message[128];
-int index = 0;
+WiFiClient           client;
+WiFiWebSocketClient  wsClient(client, serverAddress, port);
 
 Servo servo;
+
+int count = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -30,26 +33,29 @@ void setup() {
 }
 
 void loop() {
-  if (!client.connected()) {
-    client.connect(serverAddress, port);
-    Serial.print("Connected to IP: ");
-    Serial.println(serverAddress);
-    client.println("arduino");
-  }
+  Serial.print("Connecting...");
+  wsClient.begin();
 
-  // if there's anything incoming, print it:
-  while (client.available()) {
-    char c = client.read();
-    message[index++] = c;
-    if(c == '\n') {
-      Serial.write(message, index);
-      if (strncmp(message, "wow", min(3,index))){
+    wsClient.beginMessage(TYPE_TEXT);
+
+  wsClient.print("arduino");
+    wsClient.endMessage();
+
+  Serial.print("Sent Hello");
+
+  while (wsClient.connected()) {
+    int messageSize = wsClient.parseMessage();
+
+    if (messageSize > 0) {
+      Serial.println("Received a message:");
+      String message = wsClient.readString();
+      if(message ==  "wow") {
         servo.write(180);
       } else {
         servo.write(0);
       }
-      index = 0;
-      break;
+      Serial.println();
     }
+
   }
 }
