@@ -23,7 +23,7 @@ class WebSocket: NSObject, URLSessionWebSocketDelegate {
 
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError: Error?) {
     print("disconnected")
-    let url = URL(string: "ws://localhost:4444")!
+    let url = URL(string: "wss://atunnel.cf")!
     DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
       print("reconnecting")
       self.webSocketTask = session.webSocketTask(with: url)
@@ -161,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     webSocketDelegate = WebSocket()
     let session = URLSession(
       configuration: .default, delegate: webSocketDelegate, delegateQueue: OperationQueue())
-    let url = URL(string: "ws://localhost:4444")!
+    let url = URL(string: "wss://atunnel.cf")!
     session.webSocketTask(with: url).resume()
 
     NSWorkspace.shared.notificationCenter.addObserver(
