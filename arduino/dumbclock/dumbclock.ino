@@ -40,7 +40,7 @@ void loop() {
   wsClient.begin();
 
   wsClient.beginMessage(TYPE_TEXT);
-  wsClient.print("arduino");
+  wsClient.print("milo");
   wsClient.endMessage();
 
   Serial.println("Connected");

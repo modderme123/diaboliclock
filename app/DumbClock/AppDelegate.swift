@@ -18,7 +18,7 @@ class WebSocket: NSObject, URLSessionWebSocketDelegate {
     self.webSocketTask = webSocketTask
     print("Web Socket did connect")
 
-    self.send("web")
+    self.send("milo")
   }
 
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError: Error?) {
@@ -114,16 +114,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case "docs.google.com",
           "classroom.google.com",
           "sheets.google.com",
+          "drive.google.com",
           "canvas.instructure.com",
           "slides.google.com",
           "overleaf.com",
           "wolframalpha.com",
           "todoist.com",
-          "meet.google.com":
+          "meet.google.com",
+          "colab.research.google.com",
+          "scholar.google.com":
           stringOut = "homework"
         case "play.daud.io",
           "stackoverflow.com",
-          "github.com":
+          "github.com",
+          "mail.google.com":
           stringOut = "procrastination"
         case "www.youtube.com",
           "news.ycombinator.com",
@@ -138,7 +142,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
       } else {
         switch frontmost.localizedName {
-        case "Zoom",
+        case "zoom.us",
           "Anki",
           "Arduino IDE",
           "Microsoft Teams",
@@ -149,7 +153,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
           stringOut = "entertainment"
         case "Code",
           "kitty",
-          "Fork":
+          "Fork",
+          "Terminal":
           stringOut = "procrastination"
         case _:
           print(frontmost.localizedName)
