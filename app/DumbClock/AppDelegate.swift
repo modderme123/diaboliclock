@@ -30,7 +30,7 @@ class WebSocket: NSObject, URLSessionWebSocketDelegate {
       self.webSocketTask.resume()
     }
   }
-    
+
   func send(_ str: String) {
     webSocketTask.send(.string(str)) { error in
       if let error = error {
@@ -95,22 +95,71 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
       menuItem.title = newTitle.app + ";" + newTitle.title
 
-      var dontSend = false
-      if frontmost.localizedName == "Google Chrome" {
+      var stringOut = ""
+      label: if frontmost.localizedName == "Google Chrome" {
         let chromeObject: ChromeThing = SBApplication.init(bundleIdentifier: "com.google.Chrome")!
-
         let f = chromeObject.windows!()[0]
-        let t = f.activeTab!
+        if f.mode == "incognito" {
+          stringOut = "unknown"
+          break label
+        }
 
-        if f.mode == "incognito" { dontSend = true }
+        let t = f.activeTab!
         newTitle.url = t.URL
+
+        let components = URLComponents(
+          url: URL(string: newTitle.url!)!, resolvingAgainstBaseURL: false)!
+
+        switch components.host {
+        case "docs.google.com",
+          "classroom.google.com",
+          "sheets.google.com",
+          "canvas.instructure.com",
+          "slides.google.com",
+          "overleaf.com",
+          "wolframalpha.com",
+          "todoist.com",
+          "meet.google.com":
+          stringOut = "homework"
+        case "play.daud.io",
+          "stackoverflow.com",
+          "github.com":
+          stringOut = "procrastination"
+        case "www.youtube.com",
+          "news.ycombinator.com",
+          "twitter.com",
+          "www.reddit.com",
+          "webtoons.com",
+          "music.youtube.com":
+          stringOut = "entertainment"
+        case _:
+          print(components.host)
+          stringOut = "unknown"
+        }
+      } else {
+        switch frontmost.localizedName {
+        case "Zoom",
+          "Anki",
+          "Arduino IDE",
+          "Microsoft Teams",
+          "Xcode",
+          "Preview":
+          stringOut = "homework"
+        case "Discord":
+          stringOut = "entertainment"
+        case "Code",
+          "kitty",
+          "Fork":
+          stringOut = "procrastination"
+        case _:
+          print(frontmost.localizedName)
+          stringOut = "unknown"
+        }
       }
 
-
-      var jsonData =
-        dontSend ? "" : ((newTitle.app == "Google Chrome") ? "wow":"boo")
-
-      webSocketDelegate.send(jsonData ?? "")
+      // procrastination, homework, entertainment, unknown
+      print(stringOut)
+      webSocketDelegate.send(stringOut)
 
       oldTitle = newTitle
     }

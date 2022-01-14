@@ -54,10 +54,14 @@ void loop() {
       Serial.print("Received a message: ");
       Serial.println(message);
 
-      if(message ==  "wow") {
+      if(message ==  "homework") {
         servo.write(180);
-      } else {
+      } else if(message ==  "procrastination") {
+        servo.write(60);
+      } else if(message ==  "entertainment") {
         servo.write(0);
+      } else { //message == "unknown"
+        servo.write(120);
       }
     }
   }
