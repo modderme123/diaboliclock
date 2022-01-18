@@ -7,12 +7,12 @@ wss.on("connection", (ws) => {
   let clientType = undefined;
   ws.on("message", (data) => {
     if (clientType === undefined) {
-      clientType = data;
-      console.log("User joined %s", clientType);
+      clientType = data.toString('utf8');
+      console.log("User joined ", clientType);
       if (!(clientType in servos)) servos[clientType] = [];
       servos[clientType].push(ws);
     } else {
-      console.log("%s: %s", clientType, data);
+      console.log(clientType, ":", data.toString('utf8'));
       servos[clientType].forEach((s) => {
         if (s != ws) s.send(data);
       });
@@ -20,8 +20,10 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
+    if(!(clientType in servos)) return;
     var index = servos[clientType].indexOf(ws);
     if (index !== -1) servos[clientType].splice(index, 1);
   });
+
   ws.send("something");
 });

@@ -13,56 +13,58 @@ WiFiWebSocketClient  wsClient(client, serverAddress, port);
 Servo servo;
 
 int count = 0;
+char message[50];
+const char spyOn[] = "milo";
 
 void setup() {
   Serial.begin(9600);
   servo.attach(8);
+  servo.write(0);
+}
 
-  while (true) {
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.print("Attempting to connect to Network named: ");
     Serial.println(SECRET_SSID);
     WiFi.begin(SECRET_SSID, SECRET_PASS);
     if (WiFi.status() != WL_CONNECTED) {
       delay(2000);
+      return;
     } else {
-      break;
+      Serial.println("Connected");
     }
   }
-
-  // When you're connected, print out the device's network status:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-}
-
-void loop() {
-  Serial.println("Connecting...");
   wsClient.begin();
 
   wsClient.beginMessage(TYPE_TEXT);
-  wsClient.print("milo");
+  wsClient.print(spyOn);
   wsClient.endMessage();
 
-  Serial.println("Connected");
+  Serial.print("-> ");
+  Serial.println(spyOn);
 
   while (wsClient.connected()) {
     int messageSize = wsClient.parseMessage();
 
     if (messageSize > 0) {
-      String message = wsClient.readString();
+      wsClient.read(message, messageSize);
 
-      Serial.print("Received a message: ");
-      Serial.println(message);
+      Serial.print("<- ");
+      Serial.write(message, messageSize);
+      Serial.println();
 
-      if(message ==  "homework") {
-        servo.write(180);
-      } else if(message ==  "procrastination") {
-        servo.write(60);
-      } else if(message ==  "entertainment") {
-        servo.write(0);
-      } else { //message == "unknown"
-        servo.write(120);
+      if(strncmp(message,  "homework", messageSize)==0) {
+        servo.write(180-22.5);
+      } else if(strncmp(message, "procrastination", messageSize)==0) {
+        servo.write(90-22.5);
+      } else if(strncmp(message,  "entertainment", messageSize)==0) {
+        servo.write(22.5);
+      } else if(strncmp(message,  "unknown", messageSize)==0) {
+        servo.write(90+22.5);
+      } else {
+        servo.write(0);        
       }
     }
   }
+  Serial.println("-----------------");
 }
