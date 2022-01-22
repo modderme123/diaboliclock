@@ -149,7 +149,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
 
     // procrastination, homework, entertainment, unknown
     print(stringOut)
-    socket.write(string: stringOut)
+    if (self.isConnected) {
+      socket.write(string: stringOut)
+    }
 
     oldMenu = stringOut
   }
