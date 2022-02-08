@@ -2,28 +2,34 @@ import { WebSocketServer } from "ws";
 
 const wss = new WebSocketServer({ port: 4444 });
 
-let servos = {};
-wss.on("connection", (ws) => {
-  let clientType = undefined;
+let connections = [];
+let servos = new Set();
+wss.on("connection", (ws, req) => {
+  let channelName = undefined;
   ws.on("message", (data) => {
-    if (clientType === undefined) {
-      clientType = data.toString('utf8');
-      console.log("User joined ", clientType);
-      if (!(clientType in servos)) servos[clientType] = [];
-      servos[clientType].push(ws);
+    if (channelName === undefined) {
+      channelName = data.toString("utf8");
+      if (channelName == "robot") {
+        servos.add(ws);
+      } else {
+        console.log("User joined");
+        connections.push({ ws, ip: channelName || req.socket.remoteAddress });
+        connections.sort((a, b) => a.ip.localeCompare(b.ip));
+      }
     } else {
-      console.log(clientType, ":", data.toString('utf8'));
-      servos[clientType].forEach((s) => {
-        if (s != ws) s.send(data);
+      console.log(channelName, ":", data.toString("utf8"));
+      var index = connections.findIndex((x) => x.ws == ws);
+      if (index == -1 || index > 3) return;
+      servos.forEach((s) => {
+        s.send(index+":"+data);
       });
     }
   });
 
   ws.on("close", () => {
-    if(!(clientType in servos)) return;
-    var index = servos[clientType].indexOf(ws);
-    if (index !== -1) servos[clientType].splice(index, 1);
+    if (!servos.delete(ws)) {
+      var index = connections.findIndex((x) => x.ws == ws);
+      if (index !== -1) connections.splice(index, 1);
+    }
   });
-
-  ws.send("something");
 });

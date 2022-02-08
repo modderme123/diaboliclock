@@ -8,6 +8,7 @@
 import Cocoa
 import ScriptingBridge
 import Starscream
+import SystemConfiguration
 
 @objc protocol TabThing {
   @objc optional var URL: String { get }
@@ -57,6 +58,14 @@ public func SystemIdleTime() -> Double? {
   return interval
 }
 
+public func macadress() -> String {
+  guard let interfaces = SCNetworkInterfaceCopyAll() as? [SCNetworkInterface] else {
+    return ""
+  }
+
+  return interfaces.map(SCNetworkInterfaceGetHardwareAddressString)[0]! as String
+}
+
 @main
 class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
   var statusBarItem: NSStatusItem!
@@ -84,76 +93,142 @@ class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
       let chromeObject: ChromeThing = SBApplication.init(bundleIdentifier: "com.google.Chrome")!
       let f = chromeObject.windows!()[0]
       guard f.mode != "incognito" else {
-        stringOut = "unknown"
+        stringOut = "incognito"
         break label
       }
 
       let t = f.activeTab!
       guard let url = t.URL else {
-        stringOut = "unknown"
+        stringOut = ""
         break label
       }
       let components = URLComponents(url: URL(string: url)!, resolvingAgainstBaseURL: false)!
 
-      switch components.host {
-      case "docs.google.com",
-        "classroom.google.com",
-        "sheets.google.com",
-        "drive.google.com",
-        "canvas.instructure.com",
-        "slides.google.com",
-        "overleaf.com",
-        "wolframalpha.com",
-        "todoist.com",
-        "meet.google.com",
-        "colab.research.google.com",
-        "scholar.google.com":
-        stringOut = "homework"
-      case "play.daud.io",
-        "stackoverflow.com",
-        "github.com",
-        "mail.google.com":
-        stringOut = "procrastination"
-      case "www.youtube.com",
-        "news.ycombinator.com",
-        "twitter.com",
-        "www.reddit.com",
-        "webtoons.com",
-        "music.youtube.com":
-        stringOut = "entertainment"
-      case _:
-        print(components.host)
-        stringOut = "unknown"
-      }
+      stringOut = (components.host ?? "").replacingOccurrences(of: "www.", with: "")
     } else {
-      switch frontmost.localizedName {
-      case "zoom.us",
-        "Anki",
-        "Arduino IDE",
-        "Microsoft Teams",
-        "Xcode",
-        "Preview":
-        stringOut = "homework"
-      case "Discord":
-        stringOut = "entertainment"
-      case "Code",
-        "kitty",
-        "Fork",
-        "Terminal":
-        stringOut = "procrastination"
-      case _:
-        print(frontmost.localizedName)
-        stringOut = "unknown"
-      }
+      stringOut = (frontmost.localizedName ?? "").lowercased()
     }
 
-    // procrastination, homework, entertainment, unknown
-    print(stringOut)
-    if (self.isConnected) {
-      socket.write(string: stringOut)
+    var message: String
+    switch stringOut {
+    case "docs.google.com",
+      "classroom.google.com",
+      "sheets.google.com",
+      "drive.google.com",
+      "canvas.instructure.com",
+      "slides.google.com",
+      "overleaf.com",
+      "todoist.com",
+      "colab.research.google.com",
+      "scholar.google.com",
+      "jstor.org",
+      "www-jstor-org.ezproxy.sfpl.org",
+      "www.wiktionary.org",
+      "portal.proofschool.org",
+      "tinkercad.com",
+      "owl.purdue.edu":
+      message = "productivity"
+    case "reddit.com",
+      "twitter.com",
+      "facebook.com":
+      message = "social media"
+    case "nytimes.com",
+      "wsj.com",
+      "news",
+      "news.ycombinator.com":
+      message = "news"
+    case "mail.google.com",
+      "meet.google.com",
+      "messages",
+      "facetime",
+      "slack",
+      "adobe connect",
+      "zoom.us":
+      message = "communication"
+    case "steam",
+      "cool math games",
+      "ksp",
+      "minecraft",
+      "league of legends",
+      "trackmania",
+      "baba is you",
+      "geometry dash",
+      "hollow knight",
+      "dead cells",
+      "chess",
+      "lichess.com":
+      message = "games"
+    case "netflix.com",
+      "youtube.com",
+      "spotify.com",
+      "music.youtube.com",
+      "spotify",
+      "vimeo.com",
+      "wikipedia.org",
+      "buzzfeed.com",
+      "quora.com":
+      message = "entertainment"
+    case "matlab",
+      "octave",
+      "mathematica",
+      "desmos.com",
+      "wolframalpha.com",
+      "geogebra.org",
+      "geogebra",
+      "grapher",
+      "calculator",
+      "aops.com":
+      message = "math"
+    case "code",
+      "arduino ide",
+      "terminal",
+      "kitty",
+      "intellij idea",
+      "xcode",
+      "sublime text 3",
+      "idle",
+      "github.com",
+      "stackoverflow.com",
+      "arduino.cc",
+      "developer.mozilla.org",
+      "fork":
+      message = "programming"
+    case "amazon.com",
+      "alibaba.com",
+      "ebay.com",
+      "etsy.com",
+      "goodeggs.com",
+      "thisiswhyimbroke.com",
+      "stocks",
+      "lego.com":
+      message = "shopping"
+    case "gimp",
+      "adobe illustrator",
+      "pixelmator",
+      "sketchup",
+      "tinkercad",
+      "fusion 360",
+      "fritzing",
+      "preview",
+      "quicktime",
+      "pinterest.com":
+      message = "art"
+    case "incognito":
+      message = "incognito"
+    case "google.com",
+      "finder",
+      "newtab":
+      message = oldMenu ?? ""  // preserve previous message
+    case let x:
+      print("Failed", x)
+      message = "miscellaneous"
     }
 
-    oldMenu = stringOut
+    if self.isConnected {
+      socket.write(string: message)
+    }
+
+    oldMenu = message
   }
 
   func didReceive(event: WebSocketEvent, client: WebSocket) {
@@ -161,7 +236,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
     case .connected(_):
       print("websocket is connected")
       self.isConnected = true
-      socket.write(string: "milo")
+      socket.write(string: macadress())
     case .disconnected(_, _):
       print("websocket is disconnected")
       DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
@@ -278,6 +353,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
 
     self.reconnect()
 
+    if !AXIsProcessTrusted() {
+      let alert = NSAlert()
+      alert.messageText = "You have not given accessibility permissions"
+      alert.addButton(withTitle: "OK")
+      alert.alertStyle = .warning
+      alert.runModal()
+    }
+
     NSWorkspace.shared.notificationCenter.addObserver(
       self, selector: #selector(self.focusedAppChanged),
       name: NSWorkspace.didActivateApplicationNotification,
@@ -289,7 +372,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WebSocketDelegate {
   func detectIdle() {
     let seconds = 15.0 - SystemIdleTime()!
     if seconds < 0.0 {
-      socket.write(string: "unknown")
+      socket.write(string: "idle")
 
       var monitor: Any?
       monitor = NSEvent.addGlobalMonitorForEvents(matching: [

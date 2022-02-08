@@ -7,8 +7,8 @@
 const char serverAddress[] = "atunnel.cf";
 int port = 80;
 
-WiFiClient           client;
-WiFiWebSocketClient  wsClient(client, serverAddress, port);
+WiFiClient client;
+WiFiWebSocketClient wsClient(client, serverAddress, port);
 
 Servo servo;
 
@@ -53,16 +53,16 @@ void loop() {
       Serial.write(message, messageSize);
       Serial.println();
 
-      if(strncmp(message,  "homework", messageSize)==0) {
-        servo.write(180-22.5);
-      } else if(strncmp(message, "procrastination", messageSize)==0) {
-        servo.write(90-22.5);
-      } else if(strncmp(message,  "entertainment", messageSize)==0) {
+      if (strncmp(message, "homework", messageSize) == 0) {
+        servo.write(180 - 22.5);
+      } else if (strncmp(message, "procrastination", messageSize) == 0) {
+        servo.write(90 - 22.5);
+      } else if (strncmp(message, "entertainment", messageSize) == 0) {
         servo.write(22.5);
-      } else if(strncmp(message,  "unknown", messageSize)==0) {
-        servo.write(90+22.5);
+      } else if (strncmp(message, "unknown", messageSize) == 0) {
+        servo.write(90 + 22.5);
       } else {
-        servo.write(0);        
+        servo.write(0);
       }
     }
   }
